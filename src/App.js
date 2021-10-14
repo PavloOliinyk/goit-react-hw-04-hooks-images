@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import Loader from 'react-loader-spinner';
 import { ToastContainer, toast } from 'react-toastify';
 import ImageGallery from './ImageGallery';
@@ -11,127 +11,119 @@ import 'react-loader-spinner/dist/loader/css/react-spinner-loader.css';
 
 const image = new ImageApi();
 
-class App extends Component {
-  state = {
-    query: '',
-    images: [],
-    currentPage: 1,
-    totalImages: null,
-    showModal: false,
-    showLoader: false,
-    error: null,
-    activeImageIndex: null,
-  };
+function App() {
+  const [query, setQuery] = useState('');
+  const [images, setImages] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalImages, setTotalImages] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [showLoader, setShowLoader] = useState(false);
+  const [activeImageIndex, setActiveImageIndex] = useState(null);
 
-  async componentDidUpdate(prevProps, prevState) {
-    if (
-      prevState.query !== this.state.query ||
-      prevState.currentPage !== this.state.currentPage
-    ) {
+  useEffect(() => {
+    if (!query) {
+      return;
+    }
+
+    async function fetchImages() {
       try {
-        this.setState({ showLoader: true });
+        setShowLoader(true);
         const { hits, totalHits } = await image.fetchImageOrPhoto(
-          this.state.query,
-          this.state.currentPage,
+          query,
+          currentPage,
         );
 
         if (!hits.length) {
           toast.error('Enter proper query', { theme: 'colored' });
         }
 
-        this.setState(({ images }) => {
-          return {
-            images: [...images, ...hits],
-            totalImages: totalHits,
-          };
+        setImages(images => {
+          return [...images, ...hits];
         });
+        setTotalImages(totalHits);
       } catch (error) {
-        this.setState({ error });
-        toast.error(this.state.error.message, { theme: 'colored' });
+        toast.error(error.message, { theme: 'colored' });
       } finally {
-        if (prevState.images.length > 11) {
-          window.scrollTo({
-            top: document.documentElement.scrollHeight,
-            behavior: 'smooth',
-          });
-        }
-
-        this.setState({ showLoader: false });
+        setShowLoader(false);
       }
     }
-  }
 
-  modalToggle = index => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-      activeImageIndex: index,
-    }));
+    fetchImages();
+  }, [currentPage, query]);
+
+  useEffect(() => {
+    if (images.length > 12) {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [images.length]);
+
+  const modalToggle = index => {
+    setShowModal(!showModal);
+    setActiveImageIndex(index);
   };
 
-  handleSumbit = value => {
+  const handleSumbit = value => {
     if (value === '') {
       toast.error('No query entered yet...', { theme: 'colored' });
       return;
     }
 
-    this.setState({ query: value, images: [], currentPage: 1 });
+    setQuery(value);
+    setImages([]);
+    setCurrentPage(1);
   };
 
-  loadMoreImages = e => {
-    if (this.state.images.length === this.state.totalImages) {
+  const loadMoreImages = () => {
+    if (images.length === totalImages) {
       toast.error('There is no more images to show', { theme: 'colored' });
       return;
     }
 
-    this.setState(({ currentPage }) => ({ currentPage: currentPage + 1 }));
+    setCurrentPage(currentPage => currentPage + 1);
   };
 
-  render() {
-    return (
-      <>
-        <div className="App">
-          <Searchbar onSubmit={this.handleSumbit} />
+  return (
+    <>
+      <div className="App">
+        <Searchbar onSubmit={handleSumbit} />
 
-          {this.state.images.length > 1 && (
-            <>
-              <ImageGallery
-                images={this.state.images}
-                onModalClick={this.modalToggle}
-              />
-              {!this.state.showLoader && (
-                <Button onSearch={this.loadMoreImages} />
-              )}
-            </>
-          )}
+        {images.length > 1 && (
+          <>
+            <ImageGallery images={images} onModalClick={modalToggle} />
+            {!showLoader && <Button onSearch={loadMoreImages} />}
+          </>
+        )}
 
-          {this.state.showLoader && (
-            <Loader
-              type="ThreeDots"
-              color="#00BFFF"
-              height={80}
-              width={80}
-              timeout={3000}
-              style={{ textAlign: 'center' }}
-            />
-          )}
+        {showLoader && (
+          <Loader
+            type="ThreeDots"
+            color="#00BFFF"
+            height={80}
+            width={80}
+            timeout={3000}
+            style={{ textAlign: 'center' }}
+          />
+        )}
 
-          {this.state.showModal && (
-            <Modal
-              currentImage={this.state.images[this.state.activeImageIndex]}
-              onModalClick={this.modalToggle}
-            />
-          )}
-        </div>
+        {showModal && (
+          <Modal
+            currentImage={images[activeImageIndex]}
+            onModalClick={modalToggle}
+          />
+        )}
+      </div>
 
-        <ToastContainer
-          autoClose={3000}
-          pauseOnFocusLoss={false}
-          draggable={false}
-          pauseOnHover={false}
-        />
-      </>
-    );
-  }
+      <ToastContainer
+        autoClose={3000}
+        pauseOnFocusLoss={false}
+        draggable={false}
+        pauseOnHover={false}
+      />
+    </>
+  );
 }
 
 export default App;

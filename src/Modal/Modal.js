@@ -1,14 +1,15 @@
+import { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import s from './Modal.module.css';
 
 function Modal({ onModalClick, currentImage }) {
-  //  componentDidMount() {
-  //   window.addEventListener('keydown', this.closeModalByEsc);
-  // }
+  useEffect(() => {
+    window.addEventListener('keydown', closeModalByEsc);
 
-  // componentWillUnmount() {
-  //   window.removeEventListener('keydown', this.closeModalByEsc);
-  // }
+    return () => {
+      window.removeEventListener('keydown', closeModalByEsc);
+    };
+  });
 
   const closeModalByEsc = e => {
     if (e.code !== 'Escape') {
